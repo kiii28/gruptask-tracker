@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GroupTask Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:#1a2238; --blue:#2f66d0; --blue-soft:#dfe8fb; --bg:#f6f7fb; --col:#e8e9f0; --card:#fff;
+    --text:#1a2238; --muted:#5f6880; --line:#d5d8e3;
+    --todo-bg:#dbe5fb; --todo-fg:#2a4fa8; --prog-bg:#fde3bd; --prog-fg:#9a5200; --done-bg:#c9eed8; --done-fg:#17683a;
+    --danger:#b3261e; --online:#22a559;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif; line-height:1.5; }
+  button,input,select,textarea { font:inherit; color:inherit; }
+  :focus-visible { outline:3px solid #7aa2f7; outline-offset:2px; }
+  [hidden] { display:none !important; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+
+  header.bar { background:var(--navy); color:#fff; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:14px clamp(16px,4vw,40px); }
+  header.bar h1 { margin:0; font-size:1.45rem; font-weight:700; letter-spacing:-.01em; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+  .btn { border:1.5px solid transparent; border-radius:999px; padding:8px 18px; cursor:pointer; font-weight:600; background:transparent; }
+  .btn-primary { background:var(--blue); color:#fff; } .btn-primary:hover { background:#2556b3; }
+  .btn-primary[disabled] { opacity:.6; cursor:wait; }
+  .btn-outline { border-color:#8fa3d6; color:#fff; } .btn-outline:hover { background:rgba(255,255,255,.1); }
+  .btn-ghost { border-color:var(--line); background:#fff; } .btn-ghost:hover { background:var(--blue-soft); }
+  .btn-danger { color:var(--danger); border-color:#e6bcb8; background:#fff; } .btn-danger:hover { background:#fbeceb; }
+  .btn-sm { padding:3px 10px; font-size:.82rem; }
+  .btn-block { width:100%; }
+
+  /* avatar */
+  .avatar { width:var(--s,26px); height:var(--s,26px); border-radius:50%; display:inline-grid; place-items:center; background:var(--blue-soft); color:var(--todo-fg); font-weight:700; font-size:calc(var(--s,26px)*.38); flex:none; object-fit:cover; }
+  .avatar.none { background:#eceef4; color:#8a91a6; border:1.5px dashed #b6bccd; }
+  .avatar-btn { border:2px solid rgba(255,255,255,.55); background:none; border-radius:50%; padding:0; cursor:pointer; display:grid; }
+  .avatar-btn:hover { border-color:#fff; }
+  .profile { position:relative; }
+  .menu { position:absolute; right:0; top:calc(100% + 10px); width:290px; background:#fff; color:var(--text); border-radius:16px; box-shadow:0 14px 40px rgba(10,16,40,.28); padding:18px; z-index:30; }
+  .menu .who-big { display:flex; gap:12px; align-items:center; margin-bottom:12px; }
+  .menu .who-big b { display:block; font-size:1.05rem; }
+  .menu small { color:var(--muted); display:block; word-break:break-all; }
+  .menu .kv { font-size:.9rem; color:var(--muted); margin-bottom:14px; }
+  .menu .row { display:flex; gap:8px; }
+
+  main { padding:24px clamp(16px,4vw,40px) 48px; max-width:1280px; margin:0 auto; }
+
+  /* auth */
+  .auth-wrap { display:grid; place-items:center; padding:36px 0; }
+  .auth-card { width:min(420px,100%); background:#fff; border-radius:20px; padding:30px 28px; box-shadow:0 8px 30px rgba(26,34,56,.1); }
+  .auth-card h2 { margin:0 0 4px; font-size:1.5rem; }
+  .auth-card .sub { margin:0 0 20px; color:var(--muted); font-size:.95rem; }
+  .divider { display:flex; align-items:center; gap:12px; color:var(--muted); font-size:.85rem; margin:18px 0; }
+  .divider::before,.divider::after { content:""; height:1px; background:var(--line); flex:1; }
+  .google-slot { display:flex; justify-content:center; min-height:44px; }
+  .btn-google { width:100%; max-width:340px; display:flex; gap:10px; align-items:center; justify-content:center; padding:10px; border-radius:999px; border:1.5px solid var(--line); background:#fff; cursor:pointer; font-weight:600; }
+  .btn-google:hover { background:#f3f5fa; } .btn-google svg { width:18px; height:18px; }
+  .tiny { text-align:center; font-size:.82rem; color:var(--muted); margin:18px 0 0; }
+  .tiny a { color:var(--blue); font-weight:600; text-decoration:none; } .tiny a:hover { text-decoration:underline; }
+  .notice { background:#eef3ff; border:1px solid #c9d8fa; border-radius:12px; padding:10px 14px; font-size:.88rem; margin-bottom:16px; }
+  .notice.warn { background:#fff6e5; border-color:#f3d9a4; }
+  .otp-input { text-align:center; font-size:1.7rem; letter-spacing:.5em; font-weight:700; padding-left:.5em !important; }
+
+  /* dashboard */
+  .invite-banner { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; background:#fff; border:1.5px solid #c9d8fa; border-radius:14px; padding:10px 16px; margin-bottom:12px; }
+  .project-head { display:flex; flex-wrap:wrap; gap:14px 28px; align-items:flex-start; justify-content:space-between; }
+  .project-pick label { display:block; font-size:.85rem; color:var(--muted); margin-bottom:4px; }
+  .project-pick select { min-width:260px; padding:8px 12px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-weight:600; }
+  .project-meta { color:var(--muted); font-size:.92rem; margin-top:6px; }
+  .project-side { display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
+  .presence { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  .pres { position:relative; border:none; background:none; padding:0; cursor:pointer; border-radius:50%; }
+  .pres .avatar { transition:opacity .3s; }
+  .pres.off .avatar { opacity:.35; filter:grayscale(1); }
+  .pres .dot { position:absolute; right:-1px; bottom:-1px; width:11px; height:11px; border-radius:50%; background:var(--online); border:2px solid var(--bg); }
+  .pres.off .dot { display:none; }
+  .project-tools { display:flex; gap:8px; }
+
+  .progress { margin:22px 0 26px; max-width:520px; }
+  .progress-label { display:flex; justify-content:space-between; font-size:1.02rem; margin-bottom:6px; }
+  .progress-label span { color:var(--muted); font-size:.9rem; }
+  .track { height:12px; background:#dde0ea; border-radius:99px; overflow:hidden; }
+  .fill { height:100%; background:var(--blue); border-radius:99px; transition:width .45s ease; }
+
+  .board { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; align-items:start; }
+  @media (max-width:860px) { .board { grid-template-columns:1fr; } .project-side { align-items:flex-start; } .presence { justify-content:flex-start; } }
+  .column { background:var(--col); border-radius:18px; padding:16px; min-height:260px; }
+  .pill { display:inline-block; padding:4px 14px; border-radius:99px; font-weight:700; font-size:.9rem; margin-bottom:12px; }
+  .col-todo .pill { background:var(--todo-bg); color:var(--todo-fg); }
+  .col-prog .pill { background:var(--prog-bg); color:var(--prog-fg); }
+  .col-done .pill { background:var(--done-bg); color:var(--done-fg); }
+  .count { font-weight:500; opacity:.75; margin-left:4px; }
+  .card { background:var(--card); border-radius:14px; padding:14px 16px; margin-bottom:12px; box-shadow:0 1px 3px rgba(26,34,56,.12); }
+  .card h3 { margin:0 0 8px; font-size:1.02rem; font-weight:600; }
+  .who { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:.9rem; }
+  .card-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+  .add-task { width:100%; border:1.5px dashed #aab1c6; background:transparent; border-radius:12px; padding:9px; cursor:pointer; color:var(--muted); font-weight:600; }
+  .add-task:hover { background:rgba(255,255,255,.6); }
+  .empty { color:var(--muted); font-size:.92rem; padding:6px 2px 14px; }
+  .welcome { text-align:center; padding:70px 16px; color:var(--muted); } .welcome h2 { color:var(--text); margin-bottom:6px; }
+  .served { margin-top:28px; color:var(--muted); font-size:.85rem; }
+
+  /* dialog */
+  dialog { border:none; border-radius:18px; padding:0; width:min(480px,92vw); box-shadow:0 20px 60px rgba(10,16,40,.35); color:var(--text); max-height:92vh; }
+  dialog::backdrop { background:rgba(14,20,44,.55); }
+  .dlg { padding:24px; } .dlg h2 { margin:0 0 16px; font-size:1.25rem; }
+  .field { margin-bottom:14px; } .field label { display:block; font-size:.88rem; font-weight:600; margin-bottom:4px; }
+  .field input,.field select,.field textarea { width:100%; padding:9px 12px; border-radius:10px; border:1.5px solid var(--line); background:#fff; }
+  .field textarea { resize:vertical; min-height:80px; }
+  .field .hint { font-size:.8rem; color:var(--muted); margin-top:3px; }
+  .dlg-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:10px; margin-top:18px; }
+  .form-error { color:var(--danger); font-size:.9rem; min-height:1.3em; }
+  .photo-row { display:flex; align-items:center; gap:16px; margin-bottom:16px; }
+  .photo-row .btns { display:flex; gap:8px; flex-wrap:wrap; }
+  .sect { margin:18px 0 10px; padding-top:14px; border-top:1px solid var(--line); font-weight:700; font-size:.95rem; }
+  .team-list { list-style:none; margin:0 0 16px; padding:0; max-height:300px; overflow:auto; }
+  .team-list li { border-bottom:1px solid var(--line); }
+  .team-row { display:flex; align-items:center; gap:10px; width:100%; padding:9px 4px; background:none; border:none; cursor:pointer; text-align:left; border-radius:10px; }
+  .team-row:hover { background:var(--blue-soft); }
+  .team-row .info { flex:1; min-width:0; } .team-row b { display:block; } .team-row small { color:var(--muted); }
+  .tag { font-size:.75rem; padding:1px 9px; border-radius:99px; background:var(--blue-soft); color:var(--todo-fg); font-weight:600; }
+  .tag.pend { background:#eceef4; color:#6b7289; }
+  .info-head { display:flex; gap:14px; align-items:center; margin-bottom:16px; } .info-head b { font-size:1.15rem; display:block; }
+  .ro { padding:9px 12px; border-radius:10px; background:#f1f3f9; color:var(--muted); }
+
+  .stack { display:inline-flex; flex:none; }
+  .stack .avatar { border:2px solid #fff; margin-left:-9px; } .stack .avatar:first-child { margin-left:0; }
+  .checks { border:1.5px solid var(--line); border-radius:10px; padding:6px 12px 8px; margin:0 0 14px; max-height:170px; overflow:auto; }
+  .checks legend { font-size:.88rem; font-weight:600; padding:0 4px; }
+  .checks label { display:flex; gap:10px; align-items:center; padding:5px 0; cursor:pointer; }
+  .checks input { width:18px; height:18px; accent-color:var(--blue); }
+  .results { list-style:none; margin:-4px 0 10px; padding:0; border:1.5px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; }
+  .results:empty { display:none; }
+  .res-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; border-bottom:1px solid var(--line); font-size:.92rem; }
+  .res-row:last-child { border-bottom:none; }
+  .res-who { display:flex; align-items:center; gap:10px; min-width:0; }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px); background:var(--navy); color:#fff; padding:10px 20px; border-radius:12px; opacity:0; pointer-events:none; transition:.25s; max-width:90vw; z-index:50; }
+  .toast.show { opacity:1; transform:translateX(-50%); } .toast.err { background:var(--danger); }
+  @media (prefers-reduced-motion:reduce) { .fill,.toast,.pres .avatar { transition:none; } }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <h1>GroupTask Tracker</h1>
+  <div class="actions" id="headActions"></div>
+</header>
+<main id="app"></main>
+
+<dialog id="formDialog"><form method="dialog" class="dlg" id="formBody"></form></dialog>
+<dialog id="teamDialog"><div class="dlg" id="teamBody"></div></dialog>
+<dialog id="infoDialog"><div class="dlg" id="infoBody"></div></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script>
+const API = window.API_BASE || "http://localhost:5000/api";
+const STATUSES = ["To Do", "In Progress", "Done"];
+const COLS = [{ status:"To Do", cls:"col-todo" }, { status:"In Progress", cls:"col-prog" }, { status:"Done", cls:"col-done" }];
+const GICON = `<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
+const state = { token: store.get("gt_token"), me: null, cfg: {}, view: "login", authEmail: "", devOtp: "", prefill: "",
+  projects: [], project: null, members: [], tasks: [], invites: [], projectId: null };
+
+/* ---------- util ---------- */
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+const initials = (n) => String(n).split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+const formData = (f) => Object.fromEntries(new FormData(f));
+function av(name, photo, size = 26, cls = "") {
+  const st = `--s:${size}px`;
+  if (photo) return `<img class="avatar ${cls}" style="${st}" src="${esc(photo)}" alt="" referrerpolicy="no-referrer">`;
+  return `<span class="avatar ${cls}" style="${st}">${esc(initials(name))}</span>`;
+}
+let toastTimer;
+function toast(msg, isError = false) {
+  const el = $("#toast"); el.textContent = msg; el.className = "toast show" + (isError ? " err" : "");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (el.className = "toast"), 3600);
+}
+const netMsg = (e) => (e.message === "Failed to fetch" ? "Tidak bisa terhubung ke backend. Periksa API_BASE di config.js." : e.message);
+async function api(path, method = "GET", data) {
+  const headers = {};
+  if (data) headers["Content-Type"] = "application/json";
+  if (state.token) headers.Authorization = "Bearer " + state.token;
+  const res = await fetch(API + path, { method, headers, body: data ? JSON.stringify(data) : undefined });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 401 && state.token) forceLogout("Sesi berakhir, silakan login lagi.");
+    const err = new Error(json.error || `Permintaan gagal (${res.status})`); err.data = json; err.status = res.status; throw err;
+  }
+  return json;
+}
+async function run(fn) { try { await fn(); } catch (e) { toast(netMsg(e), true); } }
+function formatDate(iso) {
+  const d = new Date(iso + "T00:00:00");
+  return isNaN(d) ? esc(iso) : d.toLocaleDateString("id-ID", { day:"numeric", month:"long", year:"numeric" });
+}
+const dash = (v) => (v && v !== "-" ? v : "");
+
+/* ---------- sesi ---------- */
+let pollTimer;
+function startPolling() {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(() => {
+    if (!state.token || document.hidden) return;
+    const a = document.activeElement;
+    const busy = document.querySelector("dialog[open]") || (a && ["SELECT", "INPUT", "TEXTAREA"].includes(a.tagName));
+    (busy ? api("/me") : load()).catch(() => {});   // /me = heartbeat agar tetap terlihat online
+  }, 15000);
+}
+async function startSession(r) {
+  state.token = r.token; store.set("gt_token", r.token); state.me = r.user;
+  await acceptPendingInvite();
+  renderHeader(); await load(); startPolling();
+}
+function forceLogout(msg) {
+  clearInterval(pollTimer); state.token = null; state.me = null; store.del("gt_token");
+  Object.assign(state, { view:"login", projects:[], project:null, members:[], tasks:[], invites:[], projectId:null });
+  renderHeader(); renderAuth(); if (msg) toast(msg);
+}
+async function logout() {
+  try { await api("/auth/logout", "POST"); } catch (e) {}
+  forceLogout("Anda sudah log out.");
+}
+async function acceptPendingInvite() {
+  let t = null; try { t = sessionStorage.getItem("gt_invite"); sessionStorage.removeItem("gt_invite"); } catch (e) {}
+  if (!t) return;
+  try { const r = await api("/invitations/accept", "POST", { token: t }); state.projectId = r.project_id; toast("Undangan diterima. Anda sekarang anggota proyek."); }
+  catch (e) { toast(e.message, true); }
+}
+
+/* ---------- header + menu profil ---------- */
+function renderHeader() {
+  const box = $("#headActions");
+  if (!state.me) { box.innerHTML = ""; return; }
+  box.innerHTML = `
+    <button class="btn btn-primary" id="btnAddProject">+ Tambah Proyek</button>
+    <button class="btn btn-outline" id="btnTeam">Kelola Tim</button>
+    <div class="profile">
+      <button class="avatar-btn" id="avatarBtn" aria-label="Menu profil" aria-haspopup="true" aria-expanded="false">${av(state.me.username, state.me.photo, 38)}</button>
+      <div class="menu" id="menu" hidden>
+        <div class="who-big">${av(state.me.username, state.me.photo, 52)}<div><b>${esc(state.me.username)}</b><small>${esc(state.me.email)}</small></div></div>
+        <div class="kv">NIM: ${esc(state.me.nim || "-")}</div>
+        <div class="row"><button class="btn btn-ghost btn-sm" id="btnProfile">Edit profil</button><button class="btn btn-danger btn-sm" id="btnLogout">Log out</button></div>
+      </div>
+    </div>`;
+  $("#btnAddProject").onclick = () => openProjectForm();
+  $("#btnTeam").onclick = openTeam;
+  $("#avatarBtn").onclick = (e) => { e.stopPropagation(); toggleMenu(); };
+  $("#btnProfile").onclick = () => { toggleMenu(false); openProfile(); };
+  $("#btnLogout").onclick = logout;
+}
+function toggleMenu(force) {
+  const m = $("#menu"); if (!m) return;
+  const open = force ?? m.hidden; m.hidden = !open; $("#avatarBtn").setAttribute("aria-expanded", open);
+}
+document.addEventListener("click", (e) => { if (!e.target.closest(".profile")) toggleMenu(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") toggleMenu(false); });
+
+/* ---------- login / register / OTP ---------- */
+let gsiPromise;
+function loadGsi() {
+  gsiPromise ??= new Promise((res, rej) => { const s = document.createElement("script"); s.src = "https://accounts.google.com/gsi/client"; s.async = true; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  return gsiPromise;
+}
+async function onGoogle(resp) {
+  try { await startSession(await api("/auth/google", "POST", { credential: resp.credential })); }
+  catch (e) { toast(netMsg(e), true); }
+}
+function fallbackGoogle(el) {
+  el.innerHTML = `<button type="button" class="btn-google">${GICON} Lanjutkan dengan Google</button>`;
+  el.firstChild.onclick = () => toast("Login Google belum dikonfigurasi di server (isi GOOGLE_CLIENT_ID).", true);
+}
+async function mountGoogle(el) {
+  if (!state.cfg.google_client_id) return fallbackGoogle(el);
+  try {
+    await loadGsi();
+    if (!window.__gsiInit) { google.accounts.id.initialize({ client_id: state.cfg.google_client_id, callback: onGoogle }); window.__gsiInit = true; }
+    google.accounts.id.renderButton(el, { theme:"outline", size:"large", shape:"pill", width:Math.min(340, el.clientWidth || 340), text:"continue_with" });
+  } catch (e) { fallbackGoogle(el); }
+}
+const inviteNotice = () => { let t = null; try { t = sessionStorage.getItem("gt_invite"); } catch (e) {} return t ? `<div class="notice">Anda menerima undangan proyek. Login atau register memakai <b>email yang diundang</b> untuk menerimanya.</div>` : ""; };
+
+function renderAuth() {
+  const app = $("#app"), v = state.view;
+  if (v === "login") {
+    app.innerHTML = `<div class="auth-wrap"><div class="auth-card">
+      <h2>Masuk</h2><p class="sub">Lacak siapa mengerjakan apa di tugas kelompok Anda.</p>${inviteNotice()}
+      <form id="loginForm" novalidate>
+        <div class="field"><label for="a_email">Email</label><input id="a_email" name="email" type="email" required autocomplete="email" value="${esc(state.prefill)}"></div>
+        <div class="field"><label for="a_pass">Password</label><input id="a_pass" name="password" type="password" required autocomplete="current-password"></div>
+        <div class="form-error" id="authError" role="alert"></div>
+        <button class="btn btn-primary btn-block" type="submit">Masuk</button>
+      </form>
+      <div class="divider">atau</div><div class="google-slot" id="gslot"></div>
+      <p class="tiny">Belum punya akun? <a href="#" id="toRegister">Register</a></p></div></div>`;
+    $("#toRegister").onclick = (e) => { e.preventDefault(); state.view = "register"; renderAuth(); };
+    $("#loginForm").onsubmit = async (e) => {
+      e.preventDefault(); const d = formData(e.target), btn = e.target.querySelector("button"); btn.disabled = true;
+      try { state.prefill = ""; await startSession(await api("/auth/login", "POST", d)); }
+      catch (err) {
+        if (err.data?.needs_verification) {
+          state.authEmail = d.email.trim().toLowerCase(); state.devOtp = "";
+          try { const r = await api("/auth/resend-otp", "POST", { email: state.authEmail }); state.devOtp = r.dev_otp || ""; } catch (e2) {}
+          state.view = "otp"; renderAuth();
+        } else { $("#authError").textContent = netMsg(err); btn.disabled = false; }
+      }
+    };
+  } else if (v === "register") {
+    app.innerHTML = `<div class="auth-wrap"><div class="auth-card">
+      <h2>Register</h2><p class="sub">Buat akun baru. Kami kirim kode OTP ke email Anda.</p>${inviteNotice()}
+      <form id="regForm" novalidate>
+        <div class="field"><label for="r_user">Username</label><input id="r_user" name="username" required autocomplete="username"></div>
+        <div class="field"><label for="r_email">Email</label><input id="r_email" name="email" type="email" required autocomplete="email"></div>
+        <div class="field"><label for="r_pass">Password</label><input id="r_pass" name="password" type="password" required minlength="8" autocomplete="new-password"><div class="hint">Minimal 8 karakter.</div></div>
+        <div class="form-error" id="authError" role="alert"></div>
+        <button class="btn btn-primary btn-block" type="submit">Lanjut</button>
+      </form>
+      <div class="divider">atau</div><div class="google-slot" id="gslot"></div>
+      <p class="tiny">Sudah punya akun? <a href="#" id="toLogin">Masuk</a></p></div></div>`;
+    $("#toLogin").onclick = (e) => { e.preventDefault(); state.view = "login"; renderAuth(); };
+    $("#regForm").onsubmit = async (e) => {
+      e.preventDefault(); const d = formData(e.target), btn = e.target.querySelector("button"); btn.disabled = true;
+      try { const r = await api("/auth/register", "POST", d); state.authEmail = r.email; state.devOtp = r.dev_otp || ""; state.view = "otp"; renderAuth(); }
+      catch (err) { $("#authError").textContent = netMsg(err); btn.disabled = false; }
+    };
+  } else if (v === "otp") {
+    app.innerHTML = `<div class="auth-wrap"><div class="auth-card">
+      <h2>Verifikasi email</h2><p class="sub">Masukkan 6 digit kode OTP yang dikirim ke <b>${esc(state.authEmail)}</b>.</p>
+      ${state.devOtp ? `<div class="notice warn"><b>Mode pengembangan:</b> email belum dikonfigurasi di server, jadi kode ditampilkan di sini: <b>${esc(state.devOtp)}</b></div>` : ""}
+      <form id="otpForm" novalidate>
+        <div class="field"><label for="o_code" class="sr">Kode OTP</label><input id="o_code" name="otp" class="otp-input" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" required></div>
+        <div class="form-error" id="authError" role="alert"></div>
+        <button class="btn btn-primary btn-block" type="submit">Konfirmasi</button>
+      </form>
+      <p class="tiny"><a href="#" id="resend">Kirim ulang kode</a> &nbsp;&middot;&nbsp; <a href="#" id="backLogin">Kembali</a></p></div></div>`;
+    $("#o_code").focus();
+    $("#backLogin").onclick = (e) => { e.preventDefault(); state.view = "login"; renderAuth(); };
+    $("#resend").onclick = async (e) => {
+      e.preventDefault();
+      try { const r = await api("/auth/resend-otp", "POST", { email: state.authEmail }); state.devOtp = r.dev_otp || ""; toast("Kode baru dikirim."); renderAuth(); }
+      catch (err) { $("#authError").textContent = netMsg(err); }
+    };
+    $("#otpForm").onsubmit = async (e) => {
+      e.preventDefault(); const btn = e.target.querySelector("button"); btn.disabled = true;
+      try { await api("/auth/verify-otp", "POST", { email: state.authEmail, otp: formData(e.target).otp.trim() });
+        state.prefill = state.authEmail; state.devOtp = ""; state.view = "login"; renderAuth(); toast("Email terverifikasi. Silakan masuk."); }
+      catch (err) { $("#authError").textContent = netMsg(err); btn.disabled = false; }
+    };
+  }
+  const slot = $("#gslot"); if (slot) mountGoogle(slot);
+}
+
+/* ---------- data & render dashboard ---------- */
+async function load() {
+  const [projects, invites] = await Promise.all([api("/projects"), api("/invitations")]);
+  state.projects = projects; state.invites = invites;
+  if (!projects.find((p) => p.project_id === state.projectId)) state.projectId = projects[0]?.project_id ?? null;
+  if (state.projectId) {
+    const b = await api(`/projects/${state.projectId}/board`);
+    Object.assign(state, { project: b.project, members: b.members, tasks: b.tasks });
+  } else Object.assign(state, { project: null, members: [], tasks: [] });
+  render(); showServer();
+}
+async function showServer() {
+  try { const h = await api("/health"); const el = $("#served"); if (el) el.textContent = `Dilayani oleh server: ${h.server}`; } catch (e) {}
+}
+const memberOf = (id) => state.members.find((m) => m.member_id === id);
+const activeMembers = () => state.members.filter((m) => m.status === "active");
+
+function render() {
+  if (!state.token) return renderAuth();
+  const app = $("#app"), project = state.project;
+  const banners = state.invites.map((i) => `<div class="invite-banner"><span><b>${esc(i.invited_by)}</b> mengundang Anda ke proyek <b>${esc(i.project_name)}</b>.</span>
+    <span><button class="btn btn-primary btn-sm" data-act="inv-accept" data-id="${i.member_id}">Terima</button> <button class="btn btn-ghost btn-sm" data-act="inv-decline" data-id="${i.member_id}">Tolak</button></span></div>`).join("");
+
+  if (!project) {
+    app.innerHTML = `${banners}<div class="welcome"><h2>Belum ada proyek</h2><p>Buat proyek pertama Anda, lalu undang kolaborator lewat Kelola Tim.</p><button class="btn btn-primary" id="emptyAdd">+ Tambah Proyek</button></div>`;
+    $("#emptyAdd").onclick = () => openProjectForm(); wireActions(app); return;
+  }
+  const tasks = state.tasks;
+  const options = state.projects.map((p) => `<option value="${p.project_id}" ${p.project_id === project.project_id ? "selected" : ""}>${esc(p.project_name)}</option>`).join("");
+  const pres = activeMembers().map((m) => `<button class="pres ${m.online ? "on" : "off"}" data-act="member" data-id="${m.member_id}" title="${esc(m.name)} · ${m.online ? "online" : "offline"}" aria-label="${esc(m.name)}, ${m.online ? "online" : "offline"}">${av(m.name, m.photo, 34)}<i class="dot"></i></button>`).join("");
+  app.innerHTML = `${banners}
+    <div class="project-head">
+      <div class="project-pick"><label for="projectSelect">Proyek aktif</label><select id="projectSelect">${options}</select>
+        <div class="project-meta">${esc(project.course_name)} &middot; Deadline ${formatDate(project.deadline)}</div></div>
+      <div class="project-side">
+        <div class="presence" aria-label="Anggota proyek">${pres}</div>
+        <div class="project-tools"><button class="btn btn-ghost btn-sm" id="editProject">Edit proyek</button>
+          ${project.is_owner ? `<button class="btn btn-danger btn-sm" id="deleteProject">Hapus proyek</button>` : ""}</div>
+      </div>
+    </div>
+    <div class="progress"><div class="progress-label"><div>Progress Proyek: <strong>${project.progress_percentage}%</strong></div><span>${project.done_tasks} dari ${project.total_tasks} tugas selesai</span></div>
+      <div class="track" role="progressbar" aria-valuenow="${project.progress_percentage}" aria-valuemin="0" aria-valuemax="100"><div class="fill" style="width:${project.progress_percentage}%"></div></div></div>
+    <div class="board">${COLS.map((c) => columnHTML(c, tasks.filter((t) => t.status === c.status))).join("")}</div>
+    <div class="served" id="served"></div>`;
+  $("#projectSelect").onchange = (e) => { state.projectId = e.target.value; run(load); };
+  $("#editProject").onclick = () => openProjectForm(project);
+  $("#deleteProject")?.addEventListener("click", () => confirmDeleteProject(project));
+  wireActions(app);
+}
+function wireActions(root) { root.querySelectorAll("[data-act]").forEach((b) => (b.onclick = () => handleAction(b.dataset.act, b.dataset.id, b.dataset.status))); }
+
+function columnHTML(col, tasks) {
+  return `<section class="column ${col.cls}" aria-label="${col.status}"><span class="pill">${col.status}<span class="count">${tasks.length}</span></span>
+    ${tasks.length ? tasks.map(cardHTML).join("") : `<div class="empty">Belum ada tugas.</div>`}
+    <button class="add-task" data-act="add" data-status="${col.status}">+ Tambah Tugas</button></section>`;
+}
+function cardHTML(t) {
+  const ms = (t.member_ids || []).map(memberOf).filter(Boolean), i = STATUSES.indexOf(t.status);
+  const who = ms.length
+    ? `<span class="stack">${ms.map((m) => av(m.name, m.photo, 26)).join("")}</span><span>${esc(ms.map((m) => m.name).join(", "))}</span>`
+    : `${av("?", "", 26, "none")}Belum ditugaskan`;
+  return `<article class="card"><h3>${esc(t.title)}</h3>
+    <div class="who">${who}</div>
+    <div class="card-actions">
+      ${i > 0 ? `<button class="btn btn-ghost btn-sm" data-act="move-back" data-id="${t.task_id}">&larr; ${STATUSES[i - 1]}</button>` : ""}
+      ${i < 2 ? `<button class="btn btn-ghost btn-sm" data-act="move-next" data-id="${t.task_id}">${STATUSES[i + 1]} &rarr;</button>` : ""}
+      <button class="btn btn-ghost btn-sm" data-act="edit" data-id="${t.task_id}">Edit</button>
+      <button class="btn btn-danger btn-sm" data-act="delete" data-id="${t.task_id}">Hapus</button></div></article>`;
+}
+
+function handleAction(act, id, status) {
+  const t = state.tasks.find((x) => x.task_id === id);
+  if (act === "add") return openTaskForm(null, status);
+  if (act === "edit") return openTaskForm(t);
+  if (act === "member") return openMemberInfo(id);
+  if (act === "inv-accept") return run(async () => { const r = await api("/invitations/accept", "POST", { member_id: id }); state.projectId = r.project_id; await load(); toast("Undangan diterima."); });
+  if (act === "inv-decline") return run(async () => { await api("/invitations/decline", "POST", { member_id: id }); await load(); toast("Undangan ditolak."); });
+  if (act === "delete") {
+    if (!confirm(`Hapus tugas "${t.title}"?`)) return;
+    return run(async () => { await api(`/tasks/${id}`, "DELETE"); await load(); toast("Tugas dihapus."); });
+  }
+  const next = STATUSES[STATUSES.indexOf(t.status) + (act === "move-next" ? 1 : -1)];
+  run(async () => { await api(`/tasks/${id}/status`, "PATCH", { status: next }); await load(); toast(`Tugas dipindah ke ${next}.`); });
+}
+
+/* ---------- dialog form generik ---------- */
+function modal(html, onSubmit) {
+  const dlg = $("#formDialog"), form = $("#formBody");
+  form.innerHTML = html;
+  $("#formCancel")?.addEventListener("click", () => dlg.close());
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    try { await onSubmit(formData(form), form); dlg.close(); } catch (err) { $("#formError").textContent = netMsg(err); }
+  };
+  dlg.showModal(); form.querySelector("input:not([type=file]),select,textarea")?.focus();
+}
+const checksHTML = (f) => `<fieldset class="checks"><legend>${esc(f.label)}</legend>${
+  f.checks.length ? f.checks.map((o) => `<label><input type="checkbox" name="${f.name}" value="${esc(o.value)}" ${(f.values || []).includes(o.value) ? "checked" : ""}> ${esc(o.label)}</label>`).join("") : `<div class="hint">Belum ada anggota aktif.</div>`}</fieldset>`;
+const fieldHTML = (f) => f.checks ? checksHTML(f) : `<div class="field"><label for="f_${f.name}">${esc(f.label)}</label>${
+  f.options ? `<select id="f_${f.name}" name="${f.name}">${f.options.map((o) => `<option value="${esc(o.value)}" ${o.value === f.value ? "selected" : ""}>${esc(o.label)}</option>`).join("")}</select>`
+  : f.area ? `<textarea id="f_${f.name}" name="${f.name}" maxlength="300">${esc(f.value ?? "")}</textarea>`
+  : `<input id="f_${f.name}" name="${f.name}" type="${f.type || "text"}" value="${esc(f.value ?? "")}" ${f.required ? "required" : ""} autocomplete="off">`}${f.hint ? `<div class="hint">${esc(f.hint)}</div>` : ""}</div>`;
+function openForm({ title, fields, submitLabel, onSubmit }) {
+  modal(`<h2>${esc(title)}</h2>${fields.map(fieldHTML).join("")}<div class="form-error" id="formError"></div>
+    <div class="dlg-actions"><button type="button" class="btn btn-ghost" id="formCancel">Batal</button><button type="submit" class="btn btn-primary">${esc(submitLabel)}</button></div>`, onSubmit);
+}
+
+function openProjectForm(project) {
+  const editing = project && project.project_id;
+  openForm({ title: editing ? "Edit proyek" : "Tambah proyek", submitLabel: editing ? "Simpan perubahan" : "Tambah proyek",
+    fields: [
+      { name:"project_name", label:"Nama proyek", value: editing ? project.project_name : "", required:true },
+      { name:"course_name", label:"Mata kuliah", value: editing ? project.course_name : "", required:true },
+      { name:"deadline", label:"Deadline", type:"date", value: editing ? project.deadline : "", required:true }],
+    onSubmit: async (d) => {
+      if (editing) await api(`/projects/${project.project_id}`, "PUT", d);
+      else { const p = await api("/projects", "POST", d); state.projectId = p.project_id; }
+      await load(); toast(editing ? "Proyek diperbarui." : "Proyek ditambahkan.");
+    } });
+}
+function confirmDeleteProject(p) {
+  if (!confirm(`Hapus proyek "${p.project_name}" beserta ${p.total_tasks} tugas dan keanggotaannya?`)) return;
+  run(async () => { await api(`/projects/${p.project_id}`, "DELETE"); await load(); toast("Proyek dihapus."); });
+}
+function openTaskForm(task, defaultStatus = "To Do") {
+  openForm({ title: task ? "Edit tugas" : "Tambah tugas", submitLabel: task ? "Simpan perubahan" : "Tambah tugas",
+    fields: [
+      { name:"title", label:"Judul tugas", value: task?.title ?? "", required:true },
+      { name:"member_ids", label:"Penanggung jawab (boleh lebih dari satu)", checks: activeMembers().map((m) => ({ value:m.member_id, label:m.name })), values: task?.member_ids ?? [] },
+      { name:"status", label:"Status", value: task?.status ?? defaultStatus, options: STATUSES.map((s) => ({ value:s, label:s })) }],
+    onSubmit: async (d, form) => {
+      const data = { title: d.title, status: d.status, member_ids: new FormData(form).getAll("member_ids") };
+      if (task) await api(`/tasks/${task.task_id}`, "PUT", data); else await api("/tasks", "POST", { ...data, project_id: state.projectId });
+      await load(); toast(task ? "Tugas diperbarui." : "Tugas ditambahkan.");
+    } });
+}
+
+/* ---------- edit profil ---------- */
+function fileToAvatar(file) {
+  return new Promise((res, rej) => {
+    const img = new Image(), r = new FileReader();
+    r.onload = () => { img.onload = () => { const s = 256, c = document.createElement("canvas"); c.width = c.height = s;
+      const m = Math.min(img.width, img.height); c.getContext("2d").drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, s, s); res(c.toDataURL("image/jpeg", 0.82)); };
+      img.onerror = rej; img.src = r.result; };
+    r.onerror = rej; r.readAsDataURL(file);
+  });
+}
+function openProfile() {
+  const me = state.me; let photo = me.photo || "";
+  modal(`<h2>Edit profil</h2>
+    <div class="photo-row"><span id="pPrev">${av(me.username, photo, 68)}</span>
+      <div class="btns"><label class="btn btn-ghost btn-sm" for="pFile">Ganti foto</label><input id="pFile" type="file" accept="image/*" hidden><button type="button" class="btn btn-ghost btn-sm" id="pDel">Hapus foto</button></div></div>
+    ${fieldHTML({ name:"username", label:"Username", value: me.username, required:true })}
+    ${fieldHTML({ name:"nim", label:"NIM", value: me.nim })}
+    <div class="field"><label>Email</label><div class="ro">${esc(me.email)}</div></div>
+    <div class="sect">${me.has_password ? "Ubah password" : "Buat password (akun Google)"}</div>
+    ${me.has_password ? fieldHTML({ name:"current_password", label:"Password saat ini", type:"password" }) : ""}
+    ${fieldHTML({ name:"new_password", label:"Password baru", type:"password", hint:"Kosongkan jika tidak ingin mengubah. Minimal 8 karakter." })}
+    <div class="form-error" id="formError"></div>
+    <div class="dlg-actions"><button type="button" class="btn btn-ghost" id="formCancel">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>`,
+    async (d) => {
+      state.me = await api("/me", "PUT", { username: d.username, nim: d.nim, photo });
+      if (d.new_password) { await api("/me/password", "PUT", { current_password: d.current_password || "", new_password: d.new_password }); state.me.has_password = true; }
+      renderHeader(); await load(); toast("Profil diperbarui.");
+    });
+  const prev = () => ($("#pPrev").innerHTML = av(me.username, photo, 68));
+  $("#pFile").onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { photo = await fileToAvatar(f); prev(); } catch (err) { $("#formError").textContent = "Gambar tidak bisa dibaca."; } };
+  $("#pDel").onclick = () => { photo = ""; prev(); };
+}
+
+/* ---------- kelola tim: undang kolaborator ---------- */
+function openTeam() {
+  if (!state.project) return toast("Pilih atau buat proyek dulu.", true);
+  renderTeam(); $("#teamDialog").showModal();
+}
+function renderTeam(msg = "") {
+  const rows = state.members.map((m) => `<li><button class="team-row" data-info="${m.member_id}">
+    ${m.status === "active" ? av(m.name, m.photo, 34) : av("?", "", 34, "none")}
+    <span class="info"><b>${esc(m.name)}</b><small>${m.status === "active" ? esc([dash(m.role), m.nim !== "-" ? m.nim : ""].filter(Boolean).join(" · ") || "Belum ada role") : esc(m.email)}</small></span>
+    ${m.is_owner ? `<span class="tag">Pemilik</span>` : m.status === "pending" ? `<span class="tag pend">Menunggu</span>` : ""}</button></li>`).join("");
+  $("#teamBody").innerHTML = `<h2>Kelola tim</h2><p style="margin:-8px 0 12px;color:var(--muted);font-size:.9rem">${esc(state.project.project_name)}</p>
+    <ul class="team-list">${rows}</ul>
+    <div class="sect" style="margin-top:0">Undang kolaborator</div>
+    <form id="inviteForm" novalidate autocomplete="off">
+      <div class="field"><label for="i_q">Cari username atau email</label>
+        <input id="i_q" name="q" type="text" placeholder="Ketik username, atau email lengkap" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="resList"></div>
+      <ul class="results" id="resList" role="listbox" aria-label="Hasil pencarian"></ul>
+      <div class="form-error" id="inviteMsg" role="status" aria-live="polite">${esc(msg)}</div>
+      <div class="dlg-actions"><button type="button" class="btn btn-ghost" id="closeTeam">Tutup</button><button type="submit" class="btn btn-primary">Undang</button></div></form>`;
+  $("#closeTeam").onclick = () => $("#teamDialog").close();
+  $("#teamBody").querySelectorAll("[data-info]").forEach((b) => (b.onclick = () => { $("#teamDialog").close(); openMemberInfo(b.dataset.info); }));
+  wireSearch();
+  if (msg) $("#i_q").focus();
+}
+
+/* Pencarian kolaborator: tampil otomatis saat mengetik (maks 5 hasil dari server) */
+let searchSeq = 0, searchTimer;
+function wireSearch() {
+  const input = $("#i_q"), list = $("#resList"), msgEl = $("#inviteMsg");
+  const setMsg = (t) => (msgEl.textContent = t);
+  let last = null;
+
+  async function invite(payload) {
+    try {
+      const r = await api(`/projects/${state.projectId}/members`, "POST", payload);
+      await load();
+      renderTeam(r.email_sent ? "Undangan dikirim."
+        : r.dev_invite_link ? "Undangan dibuat. Mode dev: email tidak dikirim, penerima melihatnya sebagai banner setelah login."
+        : "Undangan dibuat, tetapi email gagal terkirim.");
+    } catch (err) { setMsg(netMsg(err)); }
+  }
+  function show(r, q) {
+    last = { r, q };
+    input.setAttribute("aria-expanded", r.results.length ? "true" : "false");
+    if (r.results.length) {
+      setMsg("");
+      list.innerHTML = r.results.map((u) => `<li class="res-row" role="option"><span class="res-who">${av(u.username, u.photo, 30)}<b>${esc(u.username)}</b></span>
+        <button type="button" class="btn btn-primary btn-sm" data-user="${u.user_id}">Undang</button></li>`).join("");
+      list.querySelectorAll("[data-user]").forEach((b) => (b.onclick = () => invite({ user_id: b.dataset.user })));
+    } else if (r.already_member) { list.innerHTML = ""; setMsg("Pengguna ini sudah menjadi anggota atau masih menunggu konfirmasi."); }
+    else if (r.query_is_email) {
+      setMsg(`Email ${q} belum terdaftar di aplikasi.`);
+      list.innerHTML = `<li class="res-row"><span>Kirim undangan ke email ini?</span><button type="button" class="btn btn-ghost btn-sm" id="inviteEmail">Undang lewat email</button></li>`;
+      $("#inviteEmail").onclick = () => invite({ email: q });
+    } else {
+      list.innerHTML = "";
+      setMsg(q.includes("@") ? "Ketik email lengkap, mis. nama@email.com." : "Username tidak ditemukan. Coba kata lain, atau ketik email lengkap.");
+    }
+  }
+  async function search() {
+    const q = input.value.trim(), seq = ++searchSeq;
+    if (!q) { list.innerHTML = ""; setMsg(""); last = null; input.setAttribute("aria-expanded", "false"); return null; }
+    try {
+      const r = await api(`/projects/${state.projectId}/users/search?q=${encodeURIComponent(q)}`);
+      if (seq !== searchSeq) return null;
+      show(r, q); return last;
+    } catch (err) { if (seq === searchSeq) setMsg(netMsg(err)); return null; }
+  }
+  input.oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(search, 180); };
+  $("#inviteForm").onsubmit = async (e) => {
+    e.preventDefault(); clearTimeout(searchTimer);
+    const res = await search();
+    if (!res) return setMsg(input.value.trim() ? msgEl.textContent : "Ketik username atau email dulu.");
+    const { r, q } = res;
+    const exact = r.results.find((u) => u.username.toLowerCase() === q.toLowerCase());
+    if (exact || r.results.length === 1) return invite({ user_id: (exact || r.results[0]).user_id });
+    if (r.results.length > 1) return setMsg("Pilih salah satu pengguna dari hasil pencarian.");
+    if (r.query_is_email && !r.already_member) return invite({ email: q });
+  };
+}
+
+/* ---------- info anggota (role & deskripsi per proyek) ---------- */
+function openMemberInfo(mid) {
+  const m = state.members.find((x) => x.member_id === mid); if (!m) return;
+  const dlg = $("#infoDialog"), body = $("#infoBody"), mine = m.user_id === state.me.user_id;
+  const meMember = state.members.find((x) => x.user_id === state.me.user_id);
+  const iAmOwner = !!meMember?.is_owner;
+  if (m.status === "pending") {
+    body.innerHTML = `<div class="info-head">${av("?", "", 56, "none")}<div><b>Pending</b><small style="color:var(--muted)">${esc(m.email)}</small></div></div>
+      <p style="color:var(--muted)">Menunggu ${esc(m.email)} menerima undangan. Setelah diterima, nama akan berubah sesuai username.</p>
+      <div class="dlg-actions"><button class="btn btn-ghost" id="infoClose">Tutup</button><button class="btn btn-danger" id="infoRemove">Batalkan undangan</button></div>`;
+  } else {
+    body.innerHTML = `<form id="infoForm"><div class="info-head">${av(m.name, m.photo, 56)}<div><b>${esc(m.name)} ${m.is_owner ? `<span class="tag">Pemilik</span>` : ""}</b><small style="color:var(--muted)">${m.online ? "Online" : "Offline"}</small></div></div>
+      <div class="field"><label>Username</label><div class="ro">${esc(m.name)}</div></div>
+      <div class="field"><label>NIM</label><div class="ro">${esc(m.nim)}</div></div>
+      ${fieldHTML({ name:"role", label:"Role di proyek ini", value: dash(m.role), hint:"Dapat diubah oleh semua anggota proyek. Hanya berlaku di proyek ini." })}
+      ${fieldHTML({ name:"description", label:"Deskripsi di proyek ini", value: dash(m.description), area:true })}
+      <div class="form-error" id="infoError"></div>
+      <div class="dlg-actions"><button type="button" class="btn btn-ghost" id="infoClose">Tutup</button>
+        ${mine && !m.is_owner ? `<button type="button" class="btn btn-danger" id="infoRemove">Keluar dari proyek</button>` : ""}
+        ${!mine && iAmOwner ? `<button type="button" class="btn btn-danger" id="infoRemove">Keluarkan</button>` : ""}
+        <button type="submit" class="btn btn-primary">Simpan</button></div></form>`;
+    $("#infoForm").onsubmit = async (e) => {
+      e.preventDefault(); const d = formData(e.target);
+      try { await api(`/members/${mid}`, "PUT", { role: d.role, description: d.description }); await load(); dlg.close(); toast("Info anggota diperbarui."); }
+      catch (err) { $("#infoError").textContent = netMsg(err); }
+    };
+  }
+  $("#infoClose").onclick = () => dlg.close();
+  const rm = $("#infoRemove");
+  if (rm) rm.onclick = () => {
+    const msg = m.status === "pending" ? "Batalkan undangan ini?" : mine ? "Keluar dari proyek ini?" : `Keluarkan ${m.name} dari proyek?`;
+    if (!confirm(msg)) return;
+    run(async () => { await api(`/members/${mid}`, "DELETE"); dlg.close(); await load(); toast("Berhasil."); });
+  };
+  dlg.showModal();
+}
+
+/* ---------- init ---------- */
+async function init() {
+  const inv = new URLSearchParams(location.search).get("invite");
+  if (inv) { try { sessionStorage.setItem("gt_invite", inv); } catch (e) {} history.replaceState(null, "", location.pathname); }
+  try { state.cfg = await api("/config"); } catch (e) { state.cfg = {}; }
+  if (state.token) {
+    try { state.me = await api("/me"); await acceptPendingInvite(); renderHeader(); await load(); startPolling(); return; }
+    catch (e) { if (e.status !== 401) toast(netMsg(e), true); }
+  }
+  state.view = inv ? "register" : "login"; renderHeader(); renderAuth();
+}
+init();
+</script>
+</body>
+</html>
