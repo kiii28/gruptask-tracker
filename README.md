@@ -32,7 +32,8 @@ Tanpa konfigurasi email, aplikasi berjalan dalam **mode dev**: kode OTP ditampil
 | Register + OTP | Username, email, password, lalu kode 6 digit dikirim ke email (berlaku 10 menit, maks 5 percobaan). Setelah konfirmasi kembali ke login. |
 | Login | Email + password, atau Google. Token sesi 7 hari. |
 | Profil | Klik lingkaran foto di kanan atas: ubah foto, username, NIM, password, dan Log out. |
-| Undang kolaborator | Kelola Tim: masukkan email. Sampai diterima, anggota tampil sebagai **Pending**. Setelah penerima klik link di email (atau tombol Terima), nama berubah menjadi username. |
+| Cari dan undang kolaborator | Kelola Tim: ketik username (hasil muncul otomatis, maks 5, awalan huruf diprioritaskan) atau email lengkap. Jika tidak ditemukan tampil pesan; email yang belum terdaftar masih bisa diundang lewat email. Sampai diterima, anggota tampil sebagai **Pending**. Setelah penerima klik link di email (atau tombol Terima di banner), nama berubah menjadi username. |
+| Penanggung jawab ganda | Satu tugas bisa dipegang beberapa anggota aktif (relasi Task-Member many-to-many). Kartu menampilkan avatar bertumpuk. |
 | Info anggota | Klik anggota: username, NIM, role, deskripsi. Role dan deskripsi bisa diubah semua anggota proyek dan hanya berlaku di proyek itu (default "-"). |
 | Status online | Foto anggota di atas tombol Edit/Hapus proyek. Online = terang + titik hijau, offline = redup. Dianggap online jika ada aktivitas dalam 45 detik terakhir (halaman memperbarui diri tiap 15 detik). |
 | Progress Kalkulator | Progres proyek = Done / total tugas, dihitung ulang otomatis setiap tugas berubah. |
@@ -84,11 +85,12 @@ Semua endpoint selain `/api/health`, `/api/config`, dan `/api/auth/*` memerlukan
 | GET / POST | `/api/projects` | Proyek milik saya / buat proyek |
 | GET / PUT / DELETE | `/api/projects/<id>` | Detail / ubah / hapus (pemilik) |
 | GET | `/api/projects/<id>/board` | Proyek + anggota (status online) + tugas |
-| GET / POST | `/api/projects/<id>/members` | Daftar anggota / undang lewat `{"email": ...}` |
+| GET / POST | `/api/projects/<id>/members` | Daftar anggota / undang lewat `{"user_id": ...}`, `{"username": ...}`, atau `{"email": ...}` |
+| GET | `/api/projects/<id>/users/search?q=` | Cari pengguna terdaftar (maks 5). Username: cocok sebagian; email: harus persis. Hasil tanpa email. |
 | GET / PUT / DELETE | `/api/members/<id>` | Detail / ubah `role`, `description` / keluarkan atau batalkan undangan |
 | GET | `/api/invitations` | Undangan untuk saya |
 | POST | `/api/invitations/accept`, `/api/invitations/decline` | `{"token": ...}` atau `{"member_id": ...}` |
-| GET / POST | `/api/tasks` | Daftar (filter `project_id`, `member_id`, `status`) / buat |
+| GET / POST | `/api/tasks` | Daftar (filter `project_id`, `member_id`, `status`) / buat (`member_ids` berupa daftar) |
 | GET / PUT / DELETE | `/api/tasks/<id>` | Detail / ubah / hapus |
-| PATCH | `/api/tasks/<id>/assign` | Tugaskan ke anggota aktif: `{"member_id": ...}` |
+| PATCH | `/api/tasks/<id>/assign` | Atur penanggung jawab: `{"member_ids": ["M01", "M02"]}` |
 | PATCH | `/api/tasks/<id>/status` | Ubah status, progres proyek dihitung ulang |
